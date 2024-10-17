@@ -51,6 +51,7 @@ const SearchInput = React.memo(({ value, onChange, inputRef }) => (
     />
   </div>
 ));
+SearchInput.displayName = 'SearchInput'; // Cause failed deployment
 
 const MemoizedTableContent = React.memo(
   ({ activities, currentPage, itemsPerPage }) => (
@@ -94,6 +95,7 @@ const MemoizedTableContent = React.memo(
     </tbody>
   )
 );
+MemoizedTableContent.displayName = 'MemoizedTableContent'; // Cause failed deployment
 
 const ActivityLog = () => {
   const [activities, setActivities] = useState([]);

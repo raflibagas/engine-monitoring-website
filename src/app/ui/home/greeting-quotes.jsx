@@ -37,7 +37,7 @@ const GreetingQuote = ({ currentTime }) => {
         <div className="text-2xl font-semibold text-gray-200 mt-2">
           {greeting}, Hakim
         </div>
-        <div className="text-white mt-2 italic">"{randomQuote}"</div>
+        <div className="text-white mt-2 italic">&quot;{randomQuote}&quot;</div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Line } from "react-chartjs-2";
 import "chartjs-adapter-date-fns";
 import {
@@ -75,11 +75,7 @@ const SensorChart = ({ sensorName }) => {
   });
   const [selectedRange, setSelectedRange] = useState("ytd");
 
-  useEffect(() => {
-    fetchData();
-  }, [dateRange]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       let url = `/api/sensor-insights?sensor=${sensorName}`;
@@ -98,7 +94,12 @@ const SensorChart = ({ sensorName }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sensorName, dateRange]);
+
+  // Add fetchData to the useEffect dependency array
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleFilterChange = (startDate, endDate) => {
     setDateRange({ startDate, endDate });
