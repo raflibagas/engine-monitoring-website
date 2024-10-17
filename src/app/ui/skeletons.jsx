@@ -106,8 +106,8 @@ export function RecentAlertSkeleton() {
 
 export function SensorInsightsSkeleton({ sensorName }) {
   return (
-    <div className="p-4 h-full flex flex-col">
-      <h2 className="text-2xl font-bold mb-4 -mt-4">{sensorName} Insights</h2>
+    <div className="h-full flex flex-col">
+      <h2 className="text-2xl font-bold mb-4 -mt-2">{sensorName} Insights</h2>
 
       <div
         className={`${shimmer} relative overflow-hidden bg-white p-6 rounded-lg shadow-lg border-2 flex-grow flex flex-col`}

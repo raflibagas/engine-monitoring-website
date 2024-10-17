@@ -42,7 +42,7 @@ export async function GET(request) {
         $project: {
           _id: 0,
           date: "$_id",
-          [sensorName]: { $round: [`$${sensorName}`, 2] },
+          [sensorName]: `$${sensorName}`, // Hapus $round
         },
       });
     } else {
@@ -50,12 +50,12 @@ export async function GET(request) {
         $project: {
           _id: 0,
           date: "$_id",
-          RPM: { $round: ["$RPM", 2] },
-          IAT: { $round: ["$IAT", 2] },
-          CLT: { $round: ["$CLT", 2] },
-          AFR: { $round: ["$AFR", 2] },
-          MAP: { $round: ["$MAP", 2] },
-          TPS: { $round: ["$TPS", 2] },
+          RPM: "$RPM",
+          IAT: "$IAT",
+          CLT: "$CLT",
+          AFR: "$AFR",
+          MAP: "$MAP",
+          TPS: "$TPS",
         },
       });
     }
@@ -65,7 +65,23 @@ export async function GET(request) {
       .aggregate(aggregationPipeline)
       .toArray();
 
-    return NextResponse.json(result);
+    // Lakukan pembulatan di sini menggunakan JavaScript
+    const roundedResult = result.map((entry) => {
+      let roundedEntry = { ...entry, date: entry.date };
+      if (sensorName) {
+        roundedEntry[sensorName] = Math.round(entry[sensorName] * 100) / 100;
+      } else {
+        roundedEntry.RPM = Math.round(entry.RPM * 100) / 100;
+        roundedEntry.IAT = Math.round(entry.IAT * 100) / 100;
+        roundedEntry.CLT = Math.round(entry.CLT * 100) / 100;
+        roundedEntry.AFR = Math.round(entry.AFR * 100) / 100;
+        roundedEntry.MAP = Math.round(entry.MAP * 100) / 100;
+        roundedEntry.TPS = Math.round(entry.TPS * 100) / 100;
+      }
+      return roundedEntry;
+    });
+
+    return NextResponse.json(roundedResult);
   } catch (e) {
     console.error(e);
     return NextResponse.json(
