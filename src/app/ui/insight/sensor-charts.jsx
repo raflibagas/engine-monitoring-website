@@ -83,7 +83,6 @@ const SensorChart = ({ sensorName }) => {
         url += `&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
       }
       const response = await fetch(url);
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // delsoon
       if (!response.ok) {
         throw new Error("Failed to fetch data");
       }

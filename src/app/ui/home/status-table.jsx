@@ -20,7 +20,6 @@ const EngineStatus = () => {
         setIsLoading(true);
         setError(null);
         const response = await fetch("/api/dashboard/activity");
-        await new Promise((resolve) => setTimeout(resolve, 2000)); //delsoon
         if (!response.ok) {
           throw new Error("Failed to fetch data");
         }

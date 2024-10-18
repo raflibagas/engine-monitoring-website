@@ -129,7 +129,6 @@ const ActivityLog = () => {
             query
           )}`
         );
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // delsoon
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

@@ -33,7 +33,6 @@ const SensorDataTable = () => {
 
       const response = await fetch(url);
       console.log("Fetch response:", response.status, response.statusText);
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // delsoon
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
