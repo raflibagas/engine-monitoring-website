@@ -93,11 +93,6 @@ const sensorConfig = {
 };
 
 const SensorChart = ({ sensorName }) => {
-  if (!sensorName || !sensorConfig[sensorName]) {
-    console.error(`Invalid or missing sensor configuration for: ${sensorName}`);
-    return <div>Error: Invalid sensor configuration</div>;
-  }
-
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -106,6 +101,11 @@ const SensorChart = ({ sensorName }) => {
     endDate: null,
   });
   const [selectedRange, setSelectedRange] = useState("24h");
+
+  if (!sensorName || !sensorConfig[sensorName]) {
+    console.error(`Invalid or missing sensor configuration for: ${sensorName}`);
+    return <div>Error: Invalid sensor configuration</div>;
+  }
 
   const fetchData = useCallback(async () => {
     try {
