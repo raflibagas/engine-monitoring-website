@@ -102,11 +102,6 @@ const SensorChart = ({ sensorName }) => {
   });
   const [selectedRange, setSelectedRange] = useState("24h");
 
-  if (!sensorName || !sensorConfig[sensorName]) {
-    console.error(`Invalid or missing sensor configuration for: ${sensorName}`);
-    return <div>Error: Invalid sensor configuration</div>;
-  }
-
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -132,6 +127,11 @@ const SensorChart = ({ sensorName }) => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  if (!sensorName || !sensorConfig[sensorName]) {
+    console.error(`Invalid or missing sensor configuration for: ${sensorName}`);
+    return <div>Error: Invalid sensor configuration</div>;
+  }
 
   const handleFilterChange = (startDate, endDate) => {
     setDateRange({ startDate, endDate });
