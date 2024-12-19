@@ -1,9 +1,7 @@
-import HomeDash from '@/app/ui/home/home-page';
+import HomeDash from "@/app/ui/home/home-page";
+import { auth } from "@/app/auth";
 
-export default function HomePage() {
-  return (
-    <div>
-      <HomeDash />
-    </div>
-  );
+export default async function HomePage() {
+  const session = await auth();
+  return <div>{session?.user && <HomeDash />}</div>;
 }

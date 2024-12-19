@@ -3,20 +3,52 @@ import clientPromise from "../../lib/mongodb";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const sensorName = searchParams.get("sensor");
+  const sensorName = decodeURIComponent(searchParams.get("sensor"));
+  console.log("Received sensor name:", sensorName);
+  
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
+  const timeRange = searchParams.get("timeRange"); // Add this to get the time range
+
+  const sensorFieldMap = {
+    "Revolution Per Minutes": "RPM",
+    "Intake Air Temperature": "IAT",
+    "Coolant Temperature": "CLT",
+    "Air-Fuel Ratio": "AFR",
+    "Manifold Absolute Pressure": "MAP",
+    "Throttle Position Sensor": "TPS",
+  };
 
   try {
     const client = await clientPromise;
     const db = client.db("ICE");
 
     let matchStage = {};
+    let dateFormat = "%Y-%m-%d"; // Default format
+
+    // Determine date format based on time range
     if (startDate && endDate) {
+      // Create dates and adjust for WIB
+      let start = new Date(startDate);
+      let end = new Date(endDate);
+
+      // Adjust start and end dates to WIB (UTC+7)
+      start.setHours(start.getHours() + 7);
+      end.setHours(end.getHours() + 7);
+
+      const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+      if (timeRange === "24h") {
+        dateFormat = "%Y-%m-%d %H:00:00"; // Group by hour
+      } else if (timeRange === "90d") {
+        dateFormat = "%Y-%m-%d"; // Group by week
+      } else if (timeRange === "ytd") {
+        dateFormat = "%Y-%m"; // Group by month
+      }
       matchStage = {
         timestamp: {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate),
+          $gte: start,
+          $lte: end,
         },
       };
     }
@@ -25,13 +57,8 @@ export async function GET(request) {
       { $match: matchStage },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
-          RPM: { $avg: "$RPM" },
-          IAT: { $avg: "$IAT" },
-          CLT: { $avg: "$CLT" },
-          AFR: { $avg: "$AFR" },
-          MAP: { $avg: "$MAP" },
-          TPS: { $avg: "$TPS" },
+          _id: { $dateToString: { format: dateFormat, date: "$timestamp" } },
+          [sensorName]: { $avg: `$${sensorFieldMap[sensorName]}` },
         },
       },
       { $sort: { _id: 1 } },
@@ -42,7 +69,7 @@ export async function GET(request) {
         $project: {
           _id: 0,
           date: "$_id",
-          [sensorName]: `$${sensorName}`, // Hapus $round
+          [sensorName]: 1,
         },
       });
     } else {
@@ -50,12 +77,12 @@ export async function GET(request) {
         $project: {
           _id: 0,
           date: "$_id",
-          RPM: "$RPM",
-          IAT: "$IAT",
-          CLT: "$CLT",
-          AFR: "$AFR",
-          MAP: "$MAP",
-          TPS: "$TPS",
+          "Revolution Per Minutes": "$Revolution Per Minutes",
+          "Intake Air Temperature": "$Intake Air Temperature",
+          "Coolant Temperature": "$Coolant Temperature",
+          "Air-Fuel Ratio": "$Air-Fuel Ratio",
+          "Manifold Absolute Pressure": "$Manifold Absolute Pressure",
+          "Throttle Position Sensor": "$Throttle Position Sensor",
         },
       });
     }
@@ -65,22 +92,28 @@ export async function GET(request) {
       .aggregate(aggregationPipeline)
       .toArray();
 
-    // Lakukan pembulatan di sini menggunakan JavaScript
     const roundedResult = result.map((entry) => {
       let roundedEntry = { ...entry, date: entry.date };
       if (sensorName) {
         roundedEntry[sensorName] = Math.round(entry[sensorName] * 100) / 100;
       } else {
-        roundedEntry.RPM = Math.round(entry.RPM * 100) / 100;
-        roundedEntry.IAT = Math.round(entry.IAT * 100) / 100;
-        roundedEntry.CLT = Math.round(entry.CLT * 100) / 100;
-        roundedEntry.AFR = Math.round(entry.AFR * 100) / 100;
-        roundedEntry.MAP = Math.round(entry.MAP * 100) / 100;
-        roundedEntry.TPS = Math.round(entry.TPS * 100) / 100;
+        roundedEntry["Revolution Per Minutes"] =
+          Math.round(entry["Revolution Per Minutes"] * 100) / 100;
+        roundedEntry["Intake Air Temperature"] =
+          Math.round(entry["Intake Air Temperature"] * 100) / 100;
+        roundedEntry["Coolant Temperature"] =
+          Math.round(entry["Coolant Temperature"] * 100) / 100;
+        roundedEntry["Air-Fuel Ratio"] =
+          Math.round(entry["Air-Fuel Ratio"] * 100) / 100;
+        roundedEntry["Manifold Absolute Pressure"] =
+          Math.round(entry["Manifold Absolute Pressure"] * 100) / 100;
+        roundedEntry["Throttle Position Sensor"] =
+          Math.round(entry["Throttle Position Sensor"] * 100) / 100;
       }
       return roundedEntry;
     });
 
+    console.log("API result:", roundedResult); // Add this to debug
     return NextResponse.json(roundedResult);
   } catch (e) {
     console.error(e);

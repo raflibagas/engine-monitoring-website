@@ -15,67 +15,73 @@ const SensorDataTable = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [noDataMessage, setNoDataMessage] = useState("");
 
-  const fetchData = useCallback(async (page, date) => {
-    console.log("fetchData called with:", { page, date });
-    setIsLoading(true);
-    setError(null);
-    setNoDataMessage("");
-    try {
-      let url = `/api/sensor-readings?page=${page}&limit=10`;
-      if (date) {
-        // Ensure the time is set to the start of the day in UTC
-        const utcDate = new Date(
-          Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-        );
-        url += `&date=${utcDate.toISOString()}`;
-      }
-      console.log("Fetching URL:", url);
+  const fetchData = useCallback(
+    async (page = 1, date = null, isLatestPaginated = false) => {
+      setIsLoading(true);
+      setError(null);
+      setNoDataMessage("");
 
-      const response = await fetch(url);
-      console.log("Fetch response:", response.status, response.statusText);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      try {
+        // Default to fetching the latest paginated data
+        let url = `/api/sensor-readings?latestPaginated=true&page=${page}&limit=10`;
+
+        // If a specific date is provided, adjust the URL to include the date parameter
+        if (date) {
+          const utcDate = new Date(
+            Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+          );
+          url = `/api/sensor-readings?page=${page}&limit=10&date=${utcDate.toISOString()}`;
+        }
+
+        const response = await fetch(url);
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+
+        if (data.readings.length === 0) {
+          setNoDataMessage("No data available.");
+          setSensorData([]);
+          setTotalPages(0);
+        } else {
+          setSensorData(data.readings);
+          setTotalPages(data.totalPages);
+        }
+      } catch (err) {
+        setError(`Failed to fetch sensor data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
       }
-      const data = await response.json();
-      console.log("Received data:", data);
-      if (data.readings.length === 0) {
-        setNoDataMessage("No data available for the selected date.");
-        setSensorData([]);
-        setTotalPages(0);
-      } else {
-        setSensorData(data.readings);
-        setTotalPages(data.totalPages);
-      }
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(`Failed to fetch sensor data: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
-    console.log("useEffect triggered", { currentPage, selectedDate });
-    fetchData(currentPage, selectedDate);
+    if (selectedDate === null && currentPage === 1) {
+      fetchData(1, null, true); // Pass `isLatestPaginated=true` on first load
+    } else {
+      fetchData(currentPage, selectedDate);
+    }
   }, [currentPage, selectedDate, fetchData]);
 
   const handleDateSubmit = useCallback((date) => {
     console.log("Date submitted:", date);
     // Convert the local date to UTC
-    const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const utcDate = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
     setSelectedDate(utcDate);
     setCurrentPage(1);
   }, []);
 
   const handleResetDate = useCallback(() => {
     console.log("Resetting date to today");
-    const today = new Date();
-    const utcToday = new Date(
-      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
-    );
-    setSelectedDate(utcToday);
+    // const today = new Date();
+    // const utcToday = new Date(
+    //   Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+    // );
+    setSelectedDate(null);
     setCurrentPage(1);
-    fetchData(1, utcToday);
+    fetchData(1, null, true);
   }, [fetchData]);
 
   const handlePageChange = useCallback((page) => {
@@ -91,17 +97,19 @@ const SensorDataTable = () => {
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
       hour12: false, // Use 24-hour format
     });
-    return formatter.format(date);
+    // Format the date and include only the hour as "HH:00"
+    return formatter.format(date).replace(",", "").replace(":00", "");
   };
 
   const renderPaginationButtons = useCallback(() => {
     const buttons = [];
     const maxVisibleButtons = 5;
-    let startPage = Math.max(1, currentPage - 2);
+    let startPage = Math.max(
+      1,
+      currentPage - Math.floor(maxVisibleButtons / 2)
+    );
     let endPage = Math.min(totalPages, startPage + maxVisibleButtons - 1);
 
     if (endPage - startPage + 1 < maxVisibleButtons) {
@@ -113,7 +121,11 @@ const SensorDataTable = () => {
         key="prev"
         onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
-        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-red-100"
+        className={`px-3 py-1 rounded-lg ${
+          currentPage === 1
+            ? "text-gray-700 bg-gray-100 cursor-not-allowed disabled:opacity-50"
+            : "bg-gray-100 text-gray-700 hover:bg-red-100"
+        }`}
       >
         Previous
       </button>
@@ -124,7 +136,7 @@ const SensorDataTable = () => {
         <button
           key={i}
           onClick={() => handlePageChange(i)}
-          className={`px-3 py-1 rounded-lg  ${
+          className={`px-3 py-1 rounded-lg  disabled:opacity-50 ${
             currentPage === i
               ? "bg-red-900 text-white"
               : "bg-gray-100 text-gray-700 hover:bg-red-100"
@@ -138,9 +150,13 @@ const SensorDataTable = () => {
     buttons.push(
       <button
         key="next"
-        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+        onClick={() => handlePageChange(Math.min(currentPage + 1))}
         disabled={currentPage === totalPages}
-        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-red-100"
+        className={`px-3 py-1 rounded-lg disabled:opacity-50 ${
+          currentPage === totalPages
+            ? "text-gray-700 bg-gray-100 cursor-not-allowed disabled:opacity-50"
+            : "bg-gray-100 text-gray-700 hover:bg-red-100"
+        }`}
       >
         Next
       </button>
@@ -149,7 +165,7 @@ const SensorDataTable = () => {
     return buttons;
   }, [currentPage, totalPages, handlePageChange]);
 
-  if (isLoading) return <HistorySkeleton/>;
+  if (isLoading) return <HistorySkeleton />;
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -218,28 +234,28 @@ const SensorDataTable = () => {
                         className={index % 2 === 0 ? "bg-gray-100" : "bg-white"}
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {index + 1}
+                          {(currentPage - 1) * 10 + index + 1}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {reading.RPM}
+                          {reading.avgRPM.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {reading.IAT}
+                          {reading.avgIAT.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {reading.CLT}
+                          {reading.avgCLT.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {reading.AFR}
+                          {reading.avgAFR.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {reading.MAP}
+                          {reading.avgMAP.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {reading.TPS}
+                          {reading.avgTPS.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatDate(reading.timestamp)}
+                          {formatDate(reading.timestamp)}:00 WIB
                         </td>
                       </tr>
                     ))}

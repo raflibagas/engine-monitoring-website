@@ -5,6 +5,7 @@ import clientPromise from "../../lib/mongodb";
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const isLatest = searchParams.get("latest") === "true";
+  const isLatestPaginated = searchParams.get("latestPaginated") === "true";
 
   try {
     const client = await clientPromise;
@@ -12,6 +13,8 @@ export async function GET(request) {
 
     if (isLatest) {
       return getLatestReading(db);
+    } else if (isLatestPaginated) {
+      return getLatestPaginatedReadings(db, request);
     } else {
       return getPaginatedReadings(db, request);
     }
@@ -48,20 +51,37 @@ async function getLatestReading(db) {
         return {
           name: sensorName,
           value: latestReading[sensorName],
-          threshold: threshold.threshold,
+          upperThreshold: threshold.upperThreshold,
+          lowerThreshold: threshold.lowerThreshold,
           unit: threshold.unit,
         };
       }
     );
 
-    const determineStatus = (value, threshold) => {
-      if (value > threshold) return "Critical";
-      if (value > threshold * 0.9) return "Warning";
+    const determineStatus = (value, thresholds) => {
+      if (!thresholds.upperThreshold || !thresholds.lowerThreshold) {
+        return "Unknown";
+      }
+
+      if (value > thresholds.upperThreshold) return "Critical";
+      if (value < thresholds.lowerThreshold) return "Critical";
+
+      // Warning zone: within 10% of either threshold
+      const upperWarningThreshold = thresholds.upperThreshold * 0.9;
+      const lowerWarningThreshold = thresholds.lowerThreshold * 1.1;
+
+      if (value >= upperWarningThreshold || value <= lowerWarningThreshold) {
+        return "Warning";
+      }
+
       return "Normal";
     };
 
     sensors.forEach((sensor) => {
-      sensor.status = determineStatus(sensor.value, sensor.threshold);
+      sensor.status = determineStatus(sensor.value, {
+        upperThreshold: sensor.upperThreshold,
+        lowerThreshold: sensor.lowerThreshold,
+      });
     });
 
     const engineHealth = sensors.every((sensor) => sensor.status === "normal")
@@ -85,10 +105,97 @@ async function getLatestReading(db) {
   }
 }
 
+async function getLatestPaginatedReadings(db, request) {
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = parseInt(searchParams.get("limit") || "10");
+  const skip = (page - 1) * limit;
+
+  try {
+    const readings = await db
+      .collection("sensor")
+      .aggregate([
+        {
+          $group: {
+            _id: {
+              year: { $year: "$timestamp" },
+              month: { $month: "$timestamp" },
+              day: { $dayOfMonth: "$timestamp" },
+              hour: { $hour: "$timestamp" },
+            },
+            avgRPM: { $avg: "$RPM" },
+            avgIAT: { $avg: "$IAT" },
+            avgCLT: { $avg: "$CLT" },
+            avgAFR: { $avg: "$AFR" },
+            avgMAP: { $avg: "$MAP" },
+            avgTPS: { $avg: "$TPS" },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: {
+            "_id.year": -1,
+            "_id.month": -1,
+            "_id.day": -1,
+            "_id.hour": -1,
+          },
+        }, // Sort by latest
+        { $skip: skip },
+        { $limit: limit },
+      ])
+      .toArray();
+
+    const total = await db
+      .collection("sensor")
+      .aggregate([
+        {
+          $group: {
+            _id: {
+              year: { $year: "$timestamp" },
+              month: { $month: "$timestamp" },
+              day: { $dayOfMonth: "$timestamp" },
+              hour: { $hour: "$timestamp" },
+            },
+          },
+        },
+      ])
+      .toArray();
+
+    const totalPages = Math.ceil(total.length / limit);
+
+    return NextResponse.json({
+      readings: readings.map((reading) => ({
+        timestamp: new Date(
+          reading._id.year,
+          reading._id.month - 1,
+          reading._id.day,
+          reading._id.hour
+        ).toISOString(),
+        avgRPM: reading.avgRPM,
+        avgIAT: reading.avgIAT,
+        avgCLT: reading.avgCLT,
+        avgAFR: reading.avgAFR,
+        avgMAP: reading.avgMAP,
+        avgTPS: reading.avgTPS,
+        count: reading.count,
+      })),
+      currentPage: page,
+      totalPages: totalPages,
+      totalReadings: total.length,
+    });
+  } catch (e) {
+    console.error("Error in getLatestPaginatedReadings:", e);
+    return NextResponse.json(
+      { error: "Failed to fetch latest paginated readings" },
+      { status: 500 }
+    );
+  }
+}
+
 async function getPaginatedReadings(db, request) {
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "50");
+  const limit = parseInt(searchParams.get("limit") || "10");
   const dateParam = searchParams.get("date");
 
   console.log("Incoming date parameter:", dateParam);
@@ -126,18 +233,57 @@ async function getPaginatedReadings(db, request) {
   const skip = (page - 1) * limit;
 
   try {
-    const [readings, total] = await Promise.all([
-      db
-        .collection("sensor")
-        .find(query)
-        .sort({ timestamp: 1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-      db.collection("sensor").countDocuments(query),
-    ]);
+    const readings = await db
+      .collection("sensor")
+      .aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$timestamp" },
+              month: { $month: "$timestamp" },
+              day: { $dayOfMonth: "$timestamp" },
+              hour: { $hour: "$timestamp" },
+            },
+            avgRPM: { $avg: "$RPM" },
+            avgIAT: { $avg: "$IAT" },
+            avgCLT: { $avg: "$CLT" },
+            avgAFR: { $avg: "$AFR" },
+            avgMAP: { $avg: "$MAP" },
+            avgTPS: { $avg: "$TPS" },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.hour": 1 },
+        },
+        { $skip: skip },
+        { $limit: limit },
+      ])
+      .toArray();
 
-    console.log(`Found ${readings.length} readings out of ${total} total`);
+    const total = await db
+      .collection("sensor")
+      .aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$timestamp" },
+              month: { $month: "$timestamp" },
+              day: { $dayOfMonth: "$timestamp" },
+              hour: { $hour: "$timestamp" },
+            },
+          },
+        },
+      ])
+      .toArray();
+
+    const totalPages = Math.ceil(total.length / limit);
+
+    console.log(
+      `Found ${readings.length} readings out of ${total.length} total`
+    );
     if (readings.length > 0) {
       console.log("Sample reading:", readings[0]);
     } else {
@@ -157,18 +303,28 @@ async function getPaginatedReadings(db, request) {
       });
     }
 
-    // In the getPaginatedReadings function, when preparing the data to send:
-    const adjustedReadings = readings.map((reading) => ({
-      ...reading,
-      timestamp: reading.timestamp.toISOString(), // Just convert to ISO string without adding hours
-    }));
-
     console.log("Returning paginated data");
+    console.log(`Total Pages: ${Math.ceil(total.length / limit)}`);
+
     return NextResponse.json({
-      readings: adjustedReadings,
+      readings: readings.map((reading) => ({
+        timestamp: new Date(
+          reading._id.year,
+          reading._id.month - 1,
+          reading._id.day,
+          reading._id.hour + 7
+        ).toISOString(),
+        avgRPM: reading.avgRPM,
+        avgIAT: reading.avgIAT,
+        avgCLT: reading.avgCLT,
+        avgAFR: reading.avgAFR,
+        avgMAP: reading.avgMAP,
+        avgTPS: reading.avgTPS,
+        count: reading.count, // Optional: Number of data points in the hour
+      })),
       currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalReadings: total,
+      totalPages: totalPages,
+      totalReadings: total.length,
     });
   } catch (e) {
     console.error("Error in getPaginatedReadings:", e);

@@ -36,6 +36,8 @@ export async function GET(request) {
       db.collection("activities").countDocuments(query),
     ]);
 
+    console.log(`Total Pages: ${Math.ceil(total / limit)}`);
+
     return NextResponse.json({
       activities,
       currentPage: page,

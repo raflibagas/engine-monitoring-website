@@ -12,6 +12,7 @@ import {
   Legend,
   TimeScale,
 } from "chart.js";
+import annotationPlugin from "chartjs-plugin-annotation";
 import TimeRangeFilter from "./time-range";
 import { SensorInsightsSkeleton } from "../skeletons";
 
@@ -23,49 +24,80 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  TimeScale
+  TimeScale,
+  annotationPlugin
 );
 
+// components/sensor-chart.jsx
 const sensorConfig = {
-  RPM: {
+  "Revolution Per Minutes": {
     min: 0,
     max: 4000,
     stepSize: 1000,
-    unit: "RPM",
+    unit: "rpm",
+    thresholds: {
+      min: 1000, // Warning threshold for low RPM
+      max: 2000, // Warning threshold for high RPM
+    },
   },
-  IAT: {
+  "Intake Air Temperature": {
+    min: 10,
+    max: 50,
+    stepSize: 20,
+    unit: "°C",
+    thresholds: {
+      min: 20,
+      max: 40,
+    },
+  },
+  "Coolant Temperature": {
     min: 20,
     max: 120,
     stepSize: 20,
     unit: "°C",
+    thresholds: {
+      min: 20,
+      max: 40,
+    },
   },
-  CLT: {
-    min: 20,
-    max: 120,
-    stepSize: 20,
-    unit: "°C",
-  },
-  AFR: {
+  "Air-Fuel Ratio": {
     min: 10,
     max: 20,
     stepSize: 1,
-    unit: "",
+    unit: ": 1",
+    thresholds: {
+      min: 12,
+      max: 16,
+    },
   },
-  MAP: {
+  "Manifold Absolute Pressure": {
     min: 0,
     max: 100,
     stepSize: 20,
     unit: "kPa",
+    thresholds: {
+      min: 60,
+      max: 120,
+    },
   },
-  TPS: {
+  "Throttle Position Sensor": {
     min: 0,
     max: 100,
     stepSize: 20,
     unit: "%",
+    thresholds: {
+      min: 50,
+      max: 90,
+    },
   },
 };
 
 const SensorChart = ({ sensorName }) => {
+  if (!sensorName || !sensorConfig[sensorName]) {
+    console.error(`Invalid or missing sensor configuration for: ${sensorName}`);
+    return <div>Error: Invalid sensor configuration</div>;
+  }
+
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,12 +105,12 @@ const SensorChart = ({ sensorName }) => {
     startDate: null,
     endDate: null,
   });
-  const [selectedRange, setSelectedRange] = useState("ytd");
+  const [selectedRange, setSelectedRange] = useState("24h");
 
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      let url = `/api/sensor-insights?sensor=${sensorName}`;
+      let url = `/api/sensor-insights?sensor=${sensorName}&timeRange=${selectedRange}`;
       if (dateRange.startDate && dateRange.endDate) {
         url += `&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
       }
@@ -87,13 +119,14 @@ const SensorChart = ({ sensorName }) => {
         throw new Error("Failed to fetch data");
       }
       const result = await response.json();
+      console.log("Fetched data:", result);
       setData(result);
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [sensorName, dateRange]);
+  }, [sensorName, dateRange, selectedRange]);
 
   // Add fetchData to the useEffect dependency array
   useEffect(() => {
@@ -102,6 +135,68 @@ const SensorChart = ({ sensorName }) => {
 
   const handleFilterChange = (startDate, endDate) => {
     setDateRange({ startDate, endDate });
+  };
+
+  const getTimeConfig = (selectedRange) => {
+    switch (selectedRange) {
+      case "24h":
+        return {
+          unit: "hour",
+          stepSize: 3,
+          displayFormats: {
+            hour: "HH:mm",
+          },
+          ticks: {
+            maxTicksLimit: 6,
+          },
+        };
+      case "7d":
+        return {
+          unit: "day",
+          stepSize: 1,
+          displayFormats: {
+            day: "MMM dd",
+          },
+        };
+      case "30d":
+        return {
+          unit: "day",
+          stepSize: 1,
+          displayFormats: {
+            day: "MMM dd",
+          },
+          ticks: {
+            maxTicksLimit: 10, // Show approximately one tick per week
+          },
+        };
+      case "90d":
+        return {
+          unit: "day",
+          stepSize: 9,
+          displayFormats: {
+            day: "MMM dd",
+          },
+          ticks: {
+            maxTicksLimit: 10, // Show approximately one tick per week
+          },
+        };
+      case "ytd":
+        return {
+          unit: "month",
+          stepSize: 1,
+          displayFormats: {
+            month: "MMM yyyy",
+          },
+        };
+      default:
+        return {
+          unit: "day",
+          stepSize: 1,
+          displayFormats: {
+            day: "MMM dd",
+          },
+        };
+    }
   };
 
   const chartData = {
@@ -128,29 +223,72 @@ const SensorChart = ({ sensorName }) => {
         display: false,
         text: `${sensorName} Over Time`,
       },
+      annotation: {
+        drawTime: "afterDatasetsDraw",
+        annotations: {
+          upperThreshold: {
+            type: "line",
+            yMin: sensorConfig[sensorName].thresholds.max,
+            yMax: sensorConfig[sensorName].thresholds.max,
+            borderColor: "rgb(255, 99, 132)",
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+              enabled: true,
+              content: `Upper Threshold: ${sensorConfig[sensorName].thresholds.max}${sensorConfig[sensorName].unit}`,
+              position: "start",
+              backgroundColor: "rgb(255, 99, 132)",
+              color: "white",
+              padding: 4,
+              font: {
+                size: 12,
+              },
+            },
+          },
+          lowerThreshold: {
+            type: "line",
+            yMin: sensorConfig[sensorName].thresholds.min,
+            yMax: sensorConfig[sensorName].thresholds.min,
+            borderColor: "rgb(255, 205, 86)",
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+              enabled: true,
+              content: `Lower Threshold: ${sensorConfig[sensorName].thresholds.min}${sensorConfig[sensorName].unit}`,
+              position: "start",
+              backgroundColor: "rgb(255, 205, 86)",
+              color: "black",
+              padding: 4,
+              font: {
+                size: 12,
+              },
+            },
+          },
+        },
+      },
     },
     scales: {
       x: {
         type: "time",
-        time: {
-          unit: "day",
-          stepSize: 3,
-          displayFormats: {
-            day: "MMM dd",
-          },
+        time: getTimeConfig(selectedRange),
+        grid: {
+          display: true,
+          drawOnChartArea: true,
+          drawTicks: true,
         },
         ticks: {
-          maxTicksLimit: 10,
+          maxRotation: 0,
+          autoSkip: true,
         },
       },
       y: {
         beginAtZero: sensorConfig[sensorName].min === 0,
-        min: sensorConfig[sensorName].min,
-        max: sensorConfig[sensorName].max,
+        min: sensorConfig[sensorName].min || 0,
+        max: sensorConfig[sensorName].max || 100,
         ticks: {
           stepSize: sensorConfig[sensorName].stepSize,
           callback: function (value) {
-            return value + sensorConfig[sensorName].unit;
+            return value + sensorConfig[sensorName].unit || "";
           },
         },
       },

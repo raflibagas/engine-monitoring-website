@@ -2,39 +2,40 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import SensorStats from "./sensor-stats";
 
 const sensors = [
   {
-    name: "RPM",
+    name: "Revolution Per Minutes",
     icon: "🔄",
     description: "Revolutions Per Minute - Measures engine speed",
   },
   {
-    name: "IAT",
+    name: "Intake Air Temperature",
     icon: "🌡️",
     description:
       "Intake Air Temperature - Measures the temperature of the air entering the engine",
   },
   {
-    name: "CLT",
+    name: "Coolant Temperature",
     icon: "🧊",
     description:
       "Coolant Temperature - Measures the temperature of the engine coolant",
   },
   {
-    name: "AFR",
+    name: "Air-Fuel Ratio",
     icon: "💨",
     description:
       "Air-Fuel Ratio - Measures the ratio of air to fuel in the engine",
   },
   {
-    name: "MAP",
+    name: "Manifold Absolute Pressure",
     icon: "📊",
     description:
       "Manifold Absolute Pressure - Measures the pressure in the intake manifold",
   },
   {
-    name: "TPS",
+    name: "Throttle Position Sensor",
     icon: "🎚️",
     description:
       "Throttle Position Sensor - Measures the position of the throttle valve",
@@ -45,9 +46,9 @@ const SensorCard = ({ sensor }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
-    <Link href={`/dashboard/insight/${sensor.name.toLowerCase()}`}>
+    <Link href={`/dashboard/insight/${sensor.name}`}>
       <div
-        className="relative bg-white p-4 rounded shadow hover:shadow-lg transition-shadow cursor-pointer w-full h-full border-2"
+        className="relative bg-white p-4 rounded shadow-lg hover:shadow-lg transition-shadow cursor-pointer w-full h-full border border-blue-900"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
@@ -72,6 +73,7 @@ const SensorList = () => {
           <SensorCard key={sensor.name} sensor={sensor} />
         ))}
       </div>
+      <SensorStats />
     </div>
   );
 };

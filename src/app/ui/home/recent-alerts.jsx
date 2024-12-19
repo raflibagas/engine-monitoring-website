@@ -29,14 +29,12 @@ const RecentAlerts = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case "high":
+  const getDescriptionColor = (description) => {
+    switch (description) {
+      case "Above Lower Threshold":
         return "text-red-600";
-      case "medium":
+      case "Below Upper Threshold":
         return "text-yellow-600";
-      case "low":
-        return "text-blue-600";
       default:
         return "text-gray-600";
     }
@@ -75,10 +73,19 @@ const RecentAlerts = () => {
       <ul className="space-y-5">
         {alerts.map((alert) => (
           <li key={alert._id} className="flex justify-between items-center">
-            <span className={`${getSeverityColor(alert.severity)}`}>
-              {alert.message}
-            </span>
-            <span className="text-gray-500 text-sm">
+            <div>
+              <span className="text-black">{alert.sensor} - </span>
+              <span
+                className={`${
+                  alert.description.includes("Above")
+                    ? "text-red-600"
+                    : "text-yellow-600"
+                }`}
+              >
+                {alert.description}
+              </span>
+            </div>
+            <span className="text-gray-500">
               {formatTime(alert.timestamp)}
             </span>
           </li>

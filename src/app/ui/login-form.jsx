@@ -1,55 +1,50 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import { lusitana } from '@/app/ui/fonts';
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { lusitana } from "@/app/ui/fonts";
 import {
   AtSymbolIcon,
   KeyIcon,
   ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
-import { ArrowRightIcon } from '@heroicons/react/20/solid';
-import { Button } from './button';
+} from "@heroicons/react/24/outline";
+import { Button } from "./button";
 
 export default function LoginForm() {
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isPending, setIsPending] = useState(false);
-  const router = useRouter();
+  const [state, setState] = useState({ error: null, pending: false });
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsPending(true);
-    setErrorMessage('');
+  async function handleSubmit(event) {
+    event.preventDefault(); // Prevent form's default submission
+
+    setState({ error: null, pending: true });
 
     const formData = new FormData(event.target);
-    const email = formData.get('email');
-    const password = formData.get('password');
+    const email = formData.get("email");
+    const password = formData.get("password");
 
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      });
+    // Use signIn for authentication
+    const result = await signIn("credentials", {
+      redirect: false, // Prevent automatic redirection by NextAuth
+      email,
+      password,
+    });
 
-      if (result.error) {
-        setErrorMessage(result.error || 'Invalid credentials.');
-      } else {
-        router.push('/dashboard'); // Redirect to dashboard on successful login
-      }
-    } catch (error) {
-      setErrorMessage('An error occurred. Please try again.');
-    } finally {
-      setIsPending(false);
+    if (result?.error) {
+      setState({ error: "Invalid credentials", pending: false });
+      return;
     }
-  };
+
+    // Redirect manually upon successful login
+    window.location.href = "/dashboard/home";
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="flex-1 rounded-lg bg-gray-50 px-6 pb-4 pt-8">
-        <h1 className={`${lusitana.className} mb-3 text-2xl`}>
-          Please log in to continue.
+      <div className="flex-1 rounded-lg bg-gray-100 px-6 pb-4 pt-8">
+        <h1
+          className={`${lusitana.className} mb-3 text-2xl flex items-center justify-center`}
+        >
+          Please log in to continue
         </h1>
         <div className="w-full">
           <div>
@@ -84,30 +79,52 @@ export default function LoginForm() {
                 id="password"
                 type="password"
                 name="password"
-                placeholder="Enter password"
+                placeholder="Enter your password"
                 required
-                minLength={6}
+                minLength={5}
               />
               <KeyIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
             </div>
           </div>
         </div>
-        <Button className="mt-4 w-full" aria-disabled={isPending} type="submit">
-          Log in <ArrowRightIcon className="ml-auto h-5 w-5 text-gray-50" />
-        </Button>
+        <LoginButton pending={state.pending} />
         <div
-          className="flex h-8 items-end space-x-1"
+          className="flex h-8 items-end space-x-1 mt-4"
           aria-live="polite"
           aria-atomic="true"
         >
-          {errorMessage && (
+          {state?.error && (
             <>
               <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
-              <p className="text-sm text-red-500">{errorMessage}</p>
+              <p className="text-sm text-red-500">{state.error}</p>
             </>
           )}
         </div>
       </div>
     </form>
+  );
+}
+
+function LoginButton({ pending }) {
+  return (
+    <Button
+      className={`mt-4 w-full -mb-2 flex items-center justify-center transition-all duration-200 ${
+        pending ? "bg-gray-400" : "bg-blue-800 hover:bg-blue-600"
+      } ${pending ? "cursor-not-allowed" : "cursor-pointer"}`}
+      aria-disabled={pending}
+      type="submit"
+    >
+      <span className="flex items-center justify-center gap-2">
+        {pending ? (
+          <span className="flex items-center gap-2">
+            <span className="animate-pulse"></span>
+            <span>Logging in...</span>
+            <span className="animate-pulse"></span>
+          </span>
+        ) : (
+          <span>Log in</span>
+        )}
+      </span>
+    </Button>
   );
 }
