@@ -21,32 +21,37 @@ const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const { email, password } = credentials;
+        try {
+          const { email, password } = credentials;
 
-        // Fetch the user from the database
-        const user = await getUserByEmail(email);
+          // Add timeout for MongoDB connection
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Database timeout")), 5000)
+          );
 
-        if (!user) {
-          throw new Error("No user found with the provided email.");
+          const userPromise = getUserByEmail(email);
+          const user = await Promise.race([userPromise, timeoutPromise]);
+
+          if (!user) {
+            console.log("No user found:", email);
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(password, user.password);
+          if (!isPasswordValid) {
+            console.log("Invalid password for:", email);
+            return null;
+          }
+
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+          };
+        } catch (error) {
+          console.error("Authorization error:", error);
+          return null;
         }
-
-        // Compare the provided password with the stored hash
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordValid) {
-          throw new Error("Invalid password.");
-        }
-
-        // Return the user object on successful validation
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-        };
-      },
-      catch(error) {
-        console.error("Authorization error:", error);
-        return null;
       },
     }),
   ],
@@ -73,6 +78,7 @@ const authOptions = {
     signIn: "/login", // Custom login page path
     error: "/auth/error", // Error page
   },
+  debug: true,
   secret: process.env.NEXTAUTH_SECRET,
 };
 
