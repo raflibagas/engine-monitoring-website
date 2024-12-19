@@ -15,6 +15,11 @@ async function getUserByEmail(email) {
 const authOptions = {
   providers: [
     Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
       async authorize(credentials) {
         const { email, password } = credentials;
 
@@ -39,10 +44,39 @@ const authOptions = {
           email: user.email,
         };
       },
+      catch(error) {
+        console.error("Authorization error:", error);
+        return null;
+      },
     }),
   ],
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  // Add callbacks
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: "/login", // Custom login page path
+    error: "/auth/error", // Error page
+  },
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export const GET = NextAuth(authOptions);
-export const POST = NextAuth(authOptions);
+// export const GET = NextAuth(authOptions);
+// export const POST = NextAuth(authOptions);
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };
