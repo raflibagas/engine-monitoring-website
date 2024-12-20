@@ -6,12 +6,21 @@ import clientPromise from "@/app/lib/mongodb";
 
 async function getUserByEmail(email) {
   try {
+    console.log('===== Auth Debug Logs =====');
+    console.log('1. Starting MongoDB connection...');
     const client = await clientPromise;
-    console.log('MongoDB connected successfully');
+    console.log('2. MongoDB connected successfully');
+    
+    console.log('3. Accessing ICE database...');
     const db = client.db("ICE");
-    return await db.collection("users").findOne({ email });
+    
+    console.log('4. Attempting to find user:', email);
+    const user = await db.collection("users").findOne({ email });
+    console.log('5. User search result:', user ? 'User found' : 'User not found');
+    
+    return user;
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ Auth Error:', error.message);
     throw error;
   }
 }
