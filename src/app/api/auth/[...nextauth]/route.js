@@ -8,8 +8,10 @@ async function getUserByEmail(email) {
   try {
     console.log("===== Auth Debug Logs =====");
     console.log("1. Starting MongoDB connection...");
+    console.log("Database:", process.env.MONGODB_URI); // Log full URI (careful with credentials)
+
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Connection timeout")), 10000)
+      setTimeout(() => reject(new Error("Connection timeout")), 100000)
     );
 
     const connectionPromise = clientPromise;
@@ -21,14 +23,21 @@ async function getUserByEmail(email) {
 
     console.log("4. Attempting to find user:", email);
     const user = await db.collection("users").findOne({ email });
+    console.log("Raw user data:", user); // Add this to see full user object
+    console.log("User found:", {
+      hasPassword: !!user?.password,
+      passwordField: user?.password?.substring(0, 20) + "...", // Safe way to log password hash
+    });
+
     if (!user) {
       return null; // Return null instead of throwing error
     }
 
     return {
-      id: user._id.toString(),
+      id: user._id?.toString() || String(user._id), // Safe conversion
       email: user.email,
       name: user.name || email,
+      password: user.password,
     };
   } catch (error) {
     console.error("Auth Error:", error.message);
@@ -56,30 +65,32 @@ const authOptions = {
           const userPromise = getUserByEmail(email);
           const user = await Promise.race([userPromise, timeoutPromise]);
 
+          console.log("User object from getUserByEmail:", user);
+
           if (!user) {
             console.log("No user found:", email);
             return null;
           }
 
-          if (!user.password) {
-            console.log("User has no password hash stored");
-            return null;
-          }
+          console.log("Found user, checking password...");
+          console.log("Password hash exists:", !!user.password);
 
-          // Add validation
-          if (!credentials.password) {
-            console.log("No password provided");
-            return null;
-          }
+          // // Add validation
+          // if (!credentials.password) {
+          //   console.log("No password provided");
+          //   return null;
+          // }
 
           const isPasswordValid = await bcrypt.compare(password, user.password);
+          console.log("Password validation:", isPasswordValid);
+
           if (!isPasswordValid) {
             console.log("Invalid password for:", email);
             return null;
           }
 
           return {
-            id: user._id.toString(),
+            id: user.id || "default-id", // Fallback id if missing
             name: user.name,
             email: user.email,
           };
