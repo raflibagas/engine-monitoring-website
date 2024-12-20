@@ -5,11 +5,15 @@ import bcrypt from "bcrypt";
 import clientPromise from "@/app/lib/mongodb";
 
 async function getUserByEmail(email) {
-  const client = await clientPromise;
-  const db = client.db("ICE");
-
-  // Find user by email
-  return await db.collection("users").findOne({ email });
+  try {
+    const client = await clientPromise;
+    console.log('MongoDB connected successfully');
+    const db = client.db("ICE");
+    return await db.collection("users").findOne({ email });
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
 }
 
 const authOptions = {
