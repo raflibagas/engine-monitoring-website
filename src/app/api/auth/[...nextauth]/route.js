@@ -61,6 +61,17 @@ const authOptions = {
             return null;
           }
 
+          if (!user.password) {
+            console.log("User has no password hash stored");
+            return null;
+          }
+
+          // Add validation
+          if (!credentials.password) {
+            console.log("No password provided");
+            return null;
+          }
+
           const isPasswordValid = await bcrypt.compare(password, user.password);
           if (!isPasswordValid) {
             console.log("Invalid password for:", email);
