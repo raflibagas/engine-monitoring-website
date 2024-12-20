@@ -6,29 +6,33 @@ import clientPromise from "@/app/lib/mongodb";
 
 async function getUserByEmail(email) {
   try {
-    console.log('===== Auth Debug Logs =====');
-    console.log('1. Starting MongoDB connection...');
-    const client = await clientPromise.catch(err => {
-      console.error('Connection Error Details:', {
-        message: err.message,
-        code: err.code,
-        name: err.name
-      });
-      throw err;
-    });
-    console.log('2. MongoDB connected successfully');
-    
-    console.log('3. Accessing ICE database...');
+    console.log("===== Auth Debug Logs =====");
+    console.log("1. Starting MongoDB connection...");
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Connection timeout")), 10000)
+    );
+
+    const connectionPromise = clientPromise;
+    const client = await Promise.race([connectionPromise, timeoutPromise]);
+    console.log("2. MongoDB connected successfully");
+
+    console.log("3. Accessing ICE database...");
     const db = client.db("ICE");
-    
-    console.log('4. Attempting to find user:', email);
+
+    console.log("4. Attempting to find user:", email);
     const user = await db.collection("users").findOne({ email });
-    console.log('5. User search result:', user ? 'User found' : 'User not found');
-    
-    return user;
+    if (!user) {
+      return null; // Return null instead of throwing error
+    }
+
+    return {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name || email,
+    };
   } catch (error) {
-    console.error('❌ Auth Error:', error.message);
-    throw error;
+    console.error("Auth Error:", error.message);
+    return null; // Return null instead of throwing error
   }
 }
 
