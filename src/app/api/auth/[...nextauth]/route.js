@@ -26,7 +26,7 @@ const authOptions = {
 
           // Add timeout for MongoDB connection
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Database timeout")), 5000)
+            setTimeout(() => reject(new Error("Database timeout")), 20000)
           );
 
           const userPromise = getUserByEmail(email);
