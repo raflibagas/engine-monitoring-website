@@ -8,7 +8,14 @@ async function getUserByEmail(email) {
   try {
     console.log('===== Auth Debug Logs =====');
     console.log('1. Starting MongoDB connection...');
-    const client = await clientPromise;
+    const client = await clientPromise.catch(err => {
+      console.error('Connection Error Details:', {
+        message: err.message,
+        code: err.code,
+        name: err.name
+      });
+      throw err;
+    });
     console.log('2. MongoDB connected successfully');
     
     console.log('3. Accessing ICE database...');
