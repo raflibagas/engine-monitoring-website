@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { ActiveTimeHistorySkeleton } from '../skeletons';
+import { ActiveTimeHistorySkeleton } from "../skeletons";
 
 ChartJS.register(
   CategoryScale,

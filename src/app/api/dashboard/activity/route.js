@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import clientPromise from "../../../lib/mongodb";
 
-const INACTIVE_THRESHOLD = 10.5 * 60 * 1000; // 10.5 minutes in milliseconds
+const INACTIVE_THRESHOLD = 2.5 * 60 * 1000; // 2.5 minutes in milliseconds
 
 export async function GET(request) {
   try {
@@ -23,8 +23,8 @@ export async function GET(request) {
         0
       )
     );
-    startOfDay.setUTCDate(startOfDay.getUTCDate() - 1);
 
+    startOfDay.setUTCDate(startOfDay.getUTCDate() - 1);
     const endOfDay = new Date(startOfDay);
     endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
     endOfDay.setUTCHours(16, 59, 59, 999);
@@ -57,32 +57,31 @@ export async function GET(request) {
         .collection("daily_engine_activity")
         .findOne({ date: startOfDay });
 
-      if (timeSinceLatestData <= INACTIVE_THRESHOLD) {
-        if (
-          !currentActivity ||
-          !currentActivity.last_processed_timestamp ||
-          new Date(latestSensorData.timestamp) >
-            new Date(currentActivity.last_processed_timestamp)
-        ) {
-          // Only update if this is new data
-          const result = await updateDailyActivity(
-            db,
-            latestSensorData,
-            startOfDay,
-            currentActivity
-          );
-          isActive = result.isActive;
-          todayActiveTime = result.activeTime;
-        } else {
-          // Data has already been processed, just return current status
-          isActive = true;
-          todayActiveTime = currentActivity.activeTime;
-        }
+      // Check if this is new data that needs processing
+      if (
+        !currentActivity ||
+        !currentActivity.last_processed_timestamp ||
+        new Date(latestSensorData.timestamp) >
+          new Date(currentActivity.last_processed_timestamp)
+      ) {
+        // Process data regardless of threshold
+        const result = await updateDailyActivity(
+          db,
+          latestSensorData,
+          startOfDay,
+          currentActivity,
+          timeSinceLatestData
+        );
+        isActive = timeSinceLatestData <= INACTIVE_THRESHOLD;
+        todayActiveTime = result.activeTime;
       } else {
-        // Engine is inactive
-        isActive = false;
-        todayActiveTime = currentActivity ? currentActivity.activeTime : 0;
+        // Data already processed, just update active status
+        isActive = timeSinceLatestData <= INACTIVE_THRESHOLD;
+        todayActiveTime = currentActivity.activeTime;
       }
+    } else {
+      isActive = false;
+      todayActiveTime = 0;
     }
 
     return NextResponse.json({
@@ -105,69 +104,58 @@ async function updateDailyActivity(
   db,
   latestData,
   startOfDay,
-  currentActivity
+  currentActivity,
+  timeSinceLastData
 ) {
-  console.log("Updating daily activity");
-  console.log("Latest data timestamp (UTC):", latestData.timestamp);
-  console.log("UTC start of WIB day for update:", startOfDay.toISOString());
-
   const latestTime = new Date(latestData.timestamp);
-  let timeToAdd = 10; // Default to 10 minutes as per your logic
-  let isActive = true;
+  let timeToAdd = 2; // 2 minutes per update
   let activeTime = currentActivity?.activeTime || 0;
 
   if (currentActivity && currentActivity.last_processed_timestamp) {
     const lastProcessed = new Date(currentActivity.last_processed_timestamp);
-    console.log("Last processed timestamp:", lastProcessed.toISOString());
 
-    // Check if last processed timestamp is from a previous day
     if (lastProcessed < startOfDay) {
+      // New day
       console.log("New day detected, starting new session");
-      // For a new day, we start fresh with just the current 10 minutes
       activeTime = timeToAdd;
     } else {
+      // Same day, check for session gap
       const timeSinceLastProcessed = latestTime - lastProcessed;
+
       if (timeSinceLastProcessed > INACTIVE_THRESHOLD) {
-        console.log("New active session started after inactivity");
-        // For a new session after inactivity, we add just the current 10 minutes
+        // New session after inactivity
+        console.log("New session after inactivity gap");
         activeTime += timeToAdd;
       } else {
-        console.log("Continuous activity");
-        // For continuous activity, we add the time since last processed
-        // This handles cases where data might be slightly delayed
-        // timeToAdd = Math.min(
-        //   Math.round(timeSinceLastProcessed / (60 * 1000)),
-        //   10
-        // );
+        // Continuous activity
+        console.log("Continuous activity in current session");
         activeTime += timeToAdd;
       }
     }
   } else {
+    // First activity of the day
     console.log("First activity of the day");
-    // For the first activity, we just add the initial 10 minutes
     activeTime = timeToAdd;
   }
 
-  console.log("Time added (minutes):", timeToAdd);
-  console.log("Total active time:", activeTime);
-  console.log("Is Active:", isActive);
-
-  const updateResult = await db.collection("daily_engine_activity").updateOne(
+  // Update the database
+  await db.collection("daily_engine_activity").updateOne(
     { date: startOfDay },
     {
       $set: {
         activeTime: activeTime,
         last_processed_timestamp: latestTime,
-        isActive: isActive,
+        last_session_start:
+          timeSinceLastData > INACTIVE_THRESHOLD
+            ? latestTime
+            : currentActivity?.last_session_start || latestTime,
       },
       $setOnInsert: { date: startOfDay },
     },
     { upsert: true }
   );
-  console.log("Update result:", updateResult);
 
   return {
-    isActive,
     activeTime,
   };
 }

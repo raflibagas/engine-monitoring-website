@@ -86,7 +86,7 @@ const EngineStatus = () => {
       </div>
       <div className="flex justify-between items-center mb-2">
         <div>
-          Today&apos;s total active time: {formatTime(todayActiveTime)};
+          Today&apos;s total active time: {formatTime(todayActiveTime)}
         </div>
         <span className="text-sm font-normal text-blue-600 flex items-center">
           <InfoIcon className="w-4 h-4 mr-1" />
