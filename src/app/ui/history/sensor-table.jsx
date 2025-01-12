@@ -237,7 +237,7 @@ const SensorDataTable = () => {
                           {(currentPage - 1) * 10 + index + 1}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {reading.avgRPM.toFixed(2)}
+                          {reading.avgRPM}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {reading.avgIAT.toFixed(2)}

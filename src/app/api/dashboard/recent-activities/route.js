@@ -24,6 +24,9 @@ export async function GET(request) {
     const response = NextResponse.json(formattedActivities);
     response.headers.set("Cache-Control", "no-store, max-age=0");
 
+    console.log("Time Result:", formattedActivities); // Add this to debug
+
+
     return NextResponse.json(formattedActivities);
   } catch (e) {
     console.error(e);

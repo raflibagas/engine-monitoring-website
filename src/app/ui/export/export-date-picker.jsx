@@ -24,7 +24,7 @@ const ExportDatePicker = memo(({ onDateSubmit, selectedDate }) => {
       const newYear = parseInt(e.target.value);
       setYear(newYear);
       const newDate = new Date(newYear, month, day);
-      onDateSubmit(newDate.toISOString().slice(0, 16));
+      onDateSubmit(newDate.toISOString().split("T")[0]);
     },
     [month, day, onDateSubmit]
   );
@@ -34,7 +34,7 @@ const ExportDatePicker = memo(({ onDateSubmit, selectedDate }) => {
       const newMonth = parseInt(e.target.value);
       setMonth(newMonth);
       const newDate = new Date(year, newMonth, day);
-      onDateSubmit(newDate.toISOString().slice(0, 16));
+      onDateSubmit(newDate.toISOString().split("T")[0]);
     },
     [year, day, onDateSubmit]
   );
@@ -44,7 +44,7 @@ const ExportDatePicker = memo(({ onDateSubmit, selectedDate }) => {
       const newDay = parseInt(e.target.value);
       setDay(newDay);
       const newDate = new Date(year, month, newDay + 1);
-      onDateSubmit(newDate.toISOString().slice(0, 16));
+      onDateSubmit(newDate.toISOString().split("T")[0]);
     },
     [year, month, onDateSubmit]
   );

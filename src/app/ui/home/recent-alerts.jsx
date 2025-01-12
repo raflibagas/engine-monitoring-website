@@ -85,9 +85,7 @@ const RecentAlerts = () => {
                 {alert.description}
               </span>
             </div>
-            <span className="text-gray-500">
-              {formatTime(alert.timestamp)}
-            </span>
+            <span className="text-gray-500">{formatTime(alert.timestamp)}</span>
           </li>
         ))}
       </ul>

@@ -91,56 +91,9 @@ export async function GET(request) {
         },
       },
       {
-        $project: {
-          RPM_warning: {
-            $cond: [
-              { $or: [{ $gt: ["$RPM", 2000] }, { $lt: ["$RPM", 1000] }] },
-              1,
-              0,
-            ],
-          },
-          IAT_warning: {
-            $cond: [
-              { $or: [{ $gt: ["$IAT", 40] }, { $lt: ["$IAT", 20] }] },
-              1,
-              0,
-            ],
-          },
-          CLT_warning: {
-            $cond: [
-              { $or: [{ $gt: ["$CLT", 100] }, { $lt: ["$CLT", 30] }] },
-              1,
-              0,
-            ],
-          },
-          AFR_warning: {
-            $cond: [
-              { $or: [{ $gt: ["$AFR", 16] }, { $lt: ["$AFR", 12] }] },
-              1,
-              0,
-            ],
-          },
-          MAP_warning: {
-            $cond: [
-              { $or: [{ $gt: ["$MAP", 150] }, { $lt: ["$MAP", 20] }] },
-              1,
-              0,
-            ],
-          },
-          TPS_warning: {
-            $cond: [{ $gt: ["$TPS", 95] }, 1, 0],
-          },
-        },
-      },
-      {
         $group: {
-          _id: null,
-          RPM_warnings: { $sum: "$RPM_warning" },
-          IAT_warnings: { $sum: "$IAT_warning" },
-          CLT_warnings: { $sum: "$CLT_warning" },
-          AFR_warnings: { $sum: "$AFR_warning" },
-          MAP_warnings: { $sum: "$MAP_warning" },
-          TPS_warnings: { $sum: "$TPS_warning" },
+          _id: "$sensor",
+          count: { $sum: 1 },
         },
       },
     ];
@@ -153,10 +106,15 @@ export async function GET(request) {
       .collection("sensor")
       .aggregate(sensorsPipeline)
       .toArray();
-    const [warningStats] = await db
-      .collection("sensor")
+    const warningStats = await db
+      .collection("alerts")
       .aggregate(warningsPipeline)
       .toArray();
+
+    const warningCounts = warningStats.reduce((acc, curr) => {
+      acc[curr._id] = curr.count;
+      return acc;
+    }, {});
 
     // Format the response
     const formattedStats = {
@@ -174,7 +132,7 @@ export async function GET(request) {
           average: Math.round(sensorStats?.RPM_avg || 0),
           min: Math.round(sensorStats?.RPM_min || 0),
           max: Math.round(sensorStats?.RPM_max || 0),
-          warnings: warningStats?.RPM_warnings || 0,
+          warnings: warningCounts["RPM"] || 0,
           unit: "rpm",
         },
         {
@@ -183,7 +141,7 @@ export async function GET(request) {
           average: Math.round(sensorStats?.IAT_avg * 10) / 10 || 0,
           min: Math.round(sensorStats?.IAT_min * 10) / 10 || 0,
           max: Math.round(sensorStats?.IAT_max * 10) / 10 || 0,
-          warnings: warningStats?.IAT_warnings || 0,
+          warnings: warningCounts["IAT"] || 0,
           unit: "°C",
         },
         {
@@ -192,7 +150,7 @@ export async function GET(request) {
           average: Math.round(sensorStats?.CLT_avg * 10) / 10 || 0,
           min: Math.round(sensorStats?.CLT_min * 10) / 10 || 0,
           max: Math.round(sensorStats?.CLT_max * 10) / 10 || 0,
-          warnings: warningStats?.CLT_warnings || 0,
+          warnings: warningCounts["CLT"] || 0,
           unit: "°C",
         },
         {
@@ -201,7 +159,7 @@ export async function GET(request) {
           average: Math.round(sensorStats?.AFR_avg * 100) / 100 || 0,
           min: Math.round(sensorStats?.AFR_min * 100) / 100 || 0,
           max: Math.round(sensorStats?.AFR_max * 100) / 100 || 0,
-          warnings: warningStats?.AFR_warnings || 0,
+          warnings: warningCounts["AFR"] || 0,
           unit: ": 1",
         },
         {
@@ -210,7 +168,7 @@ export async function GET(request) {
           average: Math.round(sensorStats?.MAP_avg * 10) / 10 || 0,
           min: Math.round(sensorStats?.MAP_min * 10) / 10 || 0,
           max: Math.round(sensorStats?.MAP_max * 10) / 10 || 0,
-          warnings: warningStats?.MAP_warnings || 0,
+          warnings: warningCounts["MAP"] || 0,
           unit: "kPa",
         },
         {
@@ -219,11 +177,14 @@ export async function GET(request) {
           average: Math.round(sensorStats?.TPS_avg * 10) / 10 || 0,
           min: Math.round(sensorStats?.TPS_min * 10) / 10 || 0,
           max: Math.round(sensorStats?.TPS_max * 10) / 10 || 0,
-          warnings: warningStats?.TPS_warnings || 0,
+          warnings: warningCounts["TPS"] || 0,
           unit: "%",
         },
       ],
     };
+
+    console.log("API result:", startDate); // Add this to debug
+    console.log("API result:", endDate); // Add this to debug
 
     return NextResponse.json(formattedStats);
   } catch (e) {

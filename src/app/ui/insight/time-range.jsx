@@ -171,7 +171,9 @@ const TimeRangeFilter = ({
               </button>
             </div>
             {dateError && (
-              <span className="text-red-500 text-sm mt-4 ml-44">{dateError}</span>
+              <span className="text-red-500 text-sm mt-4 ml-44">
+                {dateError}
+              </span>
             )}
           </div>
         </form>

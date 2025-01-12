@@ -35,8 +35,8 @@ const RecentActivity = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays <= 1) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays <= 7) return `${diffDays} days ago`;
+    if (diffDays === 2) return "Yesterday";
+    if (diffDays <= 7) return `${diffDays-1} days ago`;
     if (diffDays <= 14) return "1 week ago";
     if (diffDays <= 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return date.toLocaleDateString();

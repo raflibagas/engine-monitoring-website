@@ -5,12 +5,63 @@ import clientPromise from "@/app/lib/mongodb";
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const start = new Date(searchParams.get("start"));
-    const end = new Date(searchParams.get("end"));
+    const startParam = new Date(searchParams.get("start"));
+    const endParam = new Date(searchParams.get("end"));
 
-    // Reduce start and end times by 17 hours
-    start.setHours(start.getHours() - 17);
-    end.setHours(end.getHours() - 17);
+    const getIndonesiaTimeRangeStart = (dateParam) => {
+      if (dateParam) {
+        const date = new Date(dateParam);
+        date.setUTCDate(date.getUTCDate() - 1);
+
+        // Adjust for Indonesia time (UTC+7)
+        const startOfDay = new Date(
+          Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            17,
+            0,
+            0
+          )
+        );
+        return { start: startOfDay };
+      }
+      return null;
+    };
+
+    const getIndonesiaTimeRangeEnd = (dateParam) => {
+      if (dateParam) {
+        const date = new Date(dateParam);
+        date.setUTCDate(date.getUTCDate());
+
+        // Adjust for Indonesia time (UTC+7)
+        const endOfDay = new Date(
+          Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            17,
+            0,
+            0
+          )
+        );
+
+        return { end: endOfDay };
+      }
+      return null;
+    };
+
+    const startRange = getIndonesiaTimeRangeStart(startParam);
+    const endRange = getIndonesiaTimeRangeEnd(endParam);
+
+    if (!startRange || !endRange) {
+      return new NextResponse("Invalid date parameters", { status: 400 });
+    }
+
+    const start = startRange.start;
+    const end = endRange.end;
+
+    console.log(end);
 
     // Validate date range
     const diffDays = (end - start) / (1000 * 60 * 60 * 24);

@@ -146,6 +146,12 @@ const SensorChart = ({ sensorName }) => {
           displayFormats: {
             hour: "HH:mm",
           },
+          timezone: "Asia/Jakarta", // Set WIB timezone
+          adapters: {
+            date: {
+              zone: "Asia/Jakarta", // Also set in adapter
+            },
+          },
           ticks: {
             maxTicksLimit: 6,
           },
@@ -157,6 +163,12 @@ const SensorChart = ({ sensorName }) => {
           displayFormats: {
             day: "MMM dd",
           },
+          timezone: "Asia/Jakarta", // Set WIB timezone
+          adapters: {
+            date: {
+              zone: "Asia/Jakarta", // Also set in adapter
+            },
+          },
         };
       case "30d":
         return {
@@ -164,6 +176,12 @@ const SensorChart = ({ sensorName }) => {
           stepSize: 1,
           displayFormats: {
             day: "MMM dd",
+          },
+          timezone: "Asia/Jakarta", // Set WIB timezone
+          adapters: {
+            date: {
+              zone: "Asia/Jakarta", // Also set in adapter
+            },
           },
           ticks: {
             maxTicksLimit: 10, // Show approximately one tick per week
@@ -187,6 +205,12 @@ const SensorChart = ({ sensorName }) => {
           displayFormats: {
             month: "MMM yyyy",
           },
+          timezone: "Asia/Jakarta", // Set WIB timezone
+          adapters: {
+            date: {
+              zone: "Asia/Jakarta", // Also set in adapter
+            },
+          },
         };
       default:
         return {
@@ -195,12 +219,23 @@ const SensorChart = ({ sensorName }) => {
           displayFormats: {
             day: "MMM dd",
           },
+          timezone: "Asia/Jakarta", // Set WIB timezone
+          adapters: {
+            date: {
+              zone: "Asia/Jakarta", // Also set in adapter
+            },
+          },
         };
     }
   };
 
   const chartData = {
-    labels: data.map((item) => item.date),
+    labels: data.map((item) => {
+      // Convert to WIB time
+      const date = new Date(item.date);
+      date.setHours(date.getHours() + 7); // Add 7 hours for WIB
+      return date;
+    }),
     datasets: [
       {
         label: sensorName,

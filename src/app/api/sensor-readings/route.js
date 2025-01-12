@@ -133,6 +133,18 @@ async function getLatestPaginatedReadings(db, request) {
           },
         },
         {
+          $project: {
+            _id: 1,
+            avgRPM: { $trunc: "$avgRPM" },
+            avgIAT: 1,
+            avgCLT: 1,
+            avgAFR: 1,
+            avgMAP: 1,
+            avgTPS: 1,
+            count: 1,
+          },
+        },
+        {
           $sort: {
             "_id.year": -1,
             "_id.month": -1,
@@ -169,7 +181,7 @@ async function getLatestPaginatedReadings(db, request) {
           reading._id.year,
           reading._id.month - 1,
           reading._id.day,
-          reading._id.hour
+          reading._id.hour + 7
         ).toISOString(),
         avgRPM: reading.avgRPM,
         avgIAT: reading.avgIAT,
@@ -252,6 +264,18 @@ async function getPaginatedReadings(db, request) {
             avgMAP: { $avg: "$MAP" },
             avgTPS: { $avg: "$TPS" },
             count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            avgRPM: { $trunc: "$avgRPM" },
+            avgIAT: 1,
+            avgCLT: 1,
+            avgAFR: 1,
+            avgMAP: 1,
+            avgTPS: 1,
+            count: 1,
           },
         },
         {

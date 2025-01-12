@@ -31,7 +31,7 @@ const GaugeChart = ({ sensor }) => {
       );
     case "AFR":
       return (
-        <AFRGauge
+        <RPMGauge
           value={value}
           upperThreshold={upperThreshold}
           lowerThreshold={lowerThreshold}
@@ -49,7 +49,7 @@ const GaugeChart = ({ sensor }) => {
       );
     case "TPS":
       return (
-        <PercentageGauge
+        <RPMGauge
           value={value}
           upperThreshold={upperThreshold}
           lowerThreshold={lowerThreshold}
@@ -434,7 +434,7 @@ const StatusAlert = () => {
 
   useEffect(() => {
     fetchSensorData();
-    const intervalId = setInterval(fetchSensorData, 50000);
+    const intervalId = setInterval(fetchSensorData, 30000);
     return () => clearInterval(intervalId);
   }, []);
 

@@ -6,7 +6,7 @@ export async function GET(request) {
   const dateParam = searchParams.get("date");
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "10");
-  
+
   try {
     const client = await clientPromise;
     const db = client.db("ICE");
@@ -91,7 +91,6 @@ export async function GET(request) {
         lastError: workerStatus?.lastError,
       },
     });
-
   } catch (error) {
     console.error("Error fetching alerts:", error);
     return NextResponse.json(

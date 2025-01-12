@@ -11,8 +11,8 @@ function getDateLimits() {
   start.setDate(start.getDate() - 30); // Updated to 30 days
 
   return {
-    minDate: start.toISOString().slice(0, 16),
-    maxDate: end.toISOString().slice(0, 16),
+    minDate: start.toISOString().split("T")[0], // Only get the date part
+    maxDate: end.toISOString().split("T")[0], // Only get the date part
   };
 }
 
@@ -63,8 +63,8 @@ export default function ExportForm() {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - days + 1);
-    setStartDate(start.toISOString().slice(0, 16));
-    setEndDate(end.toISOString().slice(0, 16));
+    setStartDate(start.toISOString().split("T")[0]);
+    setEndDate(end.toISOString().split("T")[0]);
     setError("");
   };
 
