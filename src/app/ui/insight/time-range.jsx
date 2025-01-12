@@ -55,7 +55,7 @@ const TimeRangeFilter = ({
         startDate = subDays(today, 90);
         break;
       case "ytd":
-        startDate = startOfYear(today);
+        startDate = subDays(today, 365);
         break;
       default:
         return;
@@ -139,7 +139,7 @@ const TimeRangeFilter = ({
             onClick={() => handlePresetChange("ytd")}
             className={getRangeButtonClass("ytd")}
           >
-            Year to Date
+            Last Year
           </button>
         </div>
         <form

@@ -32,32 +32,32 @@ ChartJS.register(
 const sensorConfig = {
   "Revolution Per Minutes": {
     min: 0,
-    max: 4000,
+    max: 9000,
     stepSize: 1000,
     unit: "rpm",
     thresholds: {
       min: 1000, // Warning threshold for low RPM
-      max: 2000, // Warning threshold for high RPM
+      max: 9000, // Warning threshold for high RPM
     },
   },
   "Intake Air Temperature": {
-    min: 10,
-    max: 50,
+    min: 0,
+    max: 80,
     stepSize: 20,
     unit: "°C",
     thresholds: {
       min: 20,
-      max: 40,
+      max: 55,
     },
   },
   "Coolant Temperature": {
-    min: 20,
-    max: 120,
+    min: 0,
+    max: 140,
     stepSize: 20,
     unit: "°C",
     thresholds: {
       min: 20,
-      max: 40,
+      max: 110,
     },
   },
   "Air-Fuel Ratio": {
@@ -66,18 +66,18 @@ const sensorConfig = {
     stepSize: 1,
     unit: ": 1",
     thresholds: {
-      min: 12,
-      max: 16,
+      min: 12.5,
+      max: 15.5,
     },
   },
   "Manifold Absolute Pressure": {
     min: 0,
-    max: 100,
+    max: 160,
     stepSize: 20,
     unit: "kPa",
     thresholds: {
-      min: 60,
-      max: 120,
+      min: 40,
+      max: 140,
     },
   },
   "Throttle Position Sensor": {
@@ -86,7 +86,7 @@ const sensorConfig = {
     stepSize: 20,
     unit: "%",
     thresholds: {
-      min: 50,
+      min: 5,
       max: 90,
     },
   },
