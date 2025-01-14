@@ -32,7 +32,7 @@ ChartJS.register(
 const sensorConfig = {
   "Revolution Per Minutes": {
     min: 0,
-    max: 9000,
+    max: 10000,
     stepSize: 1000,
     unit: "rpm",
     thresholds: {

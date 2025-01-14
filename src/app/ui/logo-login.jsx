@@ -1,9 +1,9 @@
 import Image from 'next/image';
 import { lusitana } from '@/app/ui/fonts';
 
-export default function Logo() {
+export default function LoginLogo() {
   return (
-    <div className={`${lusitana.className} flex flex-col justify-end items-center h-full w-full -mb-6 ml-4`}>
+    <div className={`${lusitana.className} flex flex-col justify-end items-center h-full w-full mb-16 ml-24`}>
       <Image
         src="/fix.png"
         alt="PRacer Logo"
